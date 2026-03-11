@@ -215,6 +215,58 @@ nav a.active {
   background: #cbd5e1;
 }
 
+.btn-sm {
+  padding: 4px 12px;
+  font-size: 0.8rem;
+}
+
+/* Emoji Picker */
+.emoji-selected {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.emoji-selected-icon {
+  font-size: 2rem;
+}
+
+.emoji-picker {
+  background: var(--card-bg);
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  margin-top: 6px;
+  padding: 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.emoji-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+  gap: 4px;
+}
+
+.emoji-picker-item {
+  font-size: 1.5rem;
+  padding: 6px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.emoji-picker-item:hover {
+  background: var(--border);
+}
+
+.emoji-picker-empty {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 12px;
+  font-size: 0.9rem;
+}
+
 .btn-edit {
   background: var(--primary);
   color: white;
