@@ -13,7 +13,7 @@ export default function App() {
     <BrowserRouter>
       <div className="app">
         <header>
-          <h1>Event Counter</h1>
+          <h1>Family Event Counter</h1>
           <nav>
             <NavLink to="/" end>Track</NavLink>
             <NavLink to="/manage">Manage</NavLink>
