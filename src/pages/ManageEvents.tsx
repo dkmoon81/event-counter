@@ -8,8 +8,9 @@ export default function ManageEvents() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [editingEvent, setEditingEvent] = useState<EventItem | null>(null)
-  const dragItem = useRef<number | null>(null)
-  const dragOverItem = useRef<number | null>(null)
+  const [dragIndex, setDragIndex] = useState<number | null>(null)
+  const [overIndex, setOverIndex] = useState<number | null>(null)
+  const dragItemRef = useRef<number | null>(null)
 
   useEffect(() => {
     loadEvents()
@@ -61,34 +62,56 @@ export default function ManageEvents() {
     }
   }
 
-  function handleDragStart(index: number) {
-    dragItem.current = index
+  function handleDragStart(e: React.DragEvent, index: number) {
+    dragItemRef.current = index
+    setDragIndex(index)
+    e.dataTransfer.effectAllowed = 'move'
   }
 
   function handleDragOver(e: React.DragEvent, index: number) {
     e.preventDefault()
-    dragOverItem.current = index
+    e.dataTransfer.dropEffect = 'move'
+    setOverIndex(index)
   }
 
-  async function handleDrop() {
-    if (dragItem.current === null || dragOverItem.current === null) return
-    if (dragItem.current === dragOverItem.current) return
+  function handleDragLeave() {
+    setOverIndex(null)
+  }
+
+  async function handleDrop(e: React.DragEvent, dropIndex: number) {
+    e.preventDefault()
+    const fromIndex = dragItemRef.current
+    if (fromIndex === null || fromIndex === dropIndex) {
+      resetDragState()
+      return
+    }
 
     const reordered = [...events]
-    const [removed] = reordered.splice(dragItem.current, 1)
-    reordered.splice(dragOverItem.current, 0, removed)
+    const [removed] = reordered.splice(fromIndex, 1)
+    reordered.splice(dropIndex, 0, removed)
 
-    dragItem.current = null
-    dragOverItem.current = null
-
+    resetDragState()
     setEvents(reordered)
 
     try {
-      await reorderEvents(reordered.map(e => e.id))
+      await reorderEvents(reordered.map(ev => ev.id))
     } catch {
       setError('Failed to save order')
       await loadEvents()
     }
+  }
+
+  function resetDragState() {
+    dragItemRef.current = null
+    setDragIndex(null)
+    setOverIndex(null)
+  }
+
+  function getRowClassName(index: number) {
+    let cls = 'event-row'
+    if (dragIndex === index) cls += ' dragging'
+    if (overIndex === index && dragIndex !== index) cls += ' drag-over'
+    return cls
   }
 
   if (loading) return <p className="center">Loading...</p>
@@ -114,12 +137,13 @@ export default function ManageEvents() {
           {events.map((event, index) => (
             <div
               key={event.id}
-              className="event-row"
+              className={getRowClassName(index)}
               draggable
-              onDragStart={() => handleDragStart(index)}
+              onDragStart={(e) => handleDragStart(e, index)}
               onDragOver={(e) => handleDragOver(e, index)}
-              onDrop={handleDrop}
-              onDragEnd={() => { dragItem.current = null; dragOverItem.current = null; }}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, index)}
+              onDragEnd={resetDragState}
             >
               <span className="drag-handle" title="Drag to reorder">⠿</span>
               <span className="event-row-icon">
