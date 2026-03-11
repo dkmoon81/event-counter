@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
-import { searchEmoji } from '../emojiData.ts'
+import type { EmojiEntry } from '../emojiData.ts'
+import { loadEmojiData, searchEmoji } from '../emojiData.ts'
 
 interface EventFormProps {
   initialName: string
@@ -14,9 +15,11 @@ export default function EventForm({ initialName, initialIcon, submitLabel, onSub
   const [icon, setIcon] = useState(initialIcon)
   const [search, setSearch] = useState('')
   const [showPicker, setShowPicker] = useState(false)
+  const [allEmojis, setAllEmojis] = useState<EmojiEntry[]>([])
+  const [emojiLoading, setEmojiLoading] = useState(false)
   const pickerRef = useRef<HTMLDivElement>(null)
 
-  const results = searchEmoji(search)
+  const results = allEmojis.length > 0 ? searchEmoji(allEmojis, search) : []
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -27,6 +30,19 @@ export default function EventForm({ initialName, initialIcon, submitLabel, onSub
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  async function ensureEmojisLoaded() {
+    if (allEmojis.length > 0) return
+    setEmojiLoading(true)
+    try {
+      const data = await loadEmojiData()
+      setAllEmojis(data)
+    } catch {
+      // Silently fail — picker will show empty
+    } finally {
+      setEmojiLoading(false)
+    }
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -50,6 +66,11 @@ export default function EventForm({ initialName, initialIcon, submitLabel, onSub
     setSearch('')
   }
 
+  async function openPicker() {
+    setShowPicker(true)
+    await ensureEmojisLoaded()
+  }
+
   return (
     <form className="event-form" onSubmit={handleSubmit}>
       <div className="form-group">
@@ -68,7 +89,7 @@ export default function EventForm({ initialName, initialIcon, submitLabel, onSub
         {icon ? (
           <div className="emoji-selected">
             <span className="emoji-selected-icon">{icon}</span>
-            <button type="button" className="btn btn-secondary btn-sm" onClick={() => { setIcon(''); setShowPicker(true); }}>Change</button>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={() => { setIcon(''); openPicker(); }}>Change</button>
             <button type="button" className="btn btn-secondary btn-sm" onClick={clearIcon}>Remove</button>
           </div>
         ) : (
@@ -76,14 +97,16 @@ export default function EventForm({ initialName, initialIcon, submitLabel, onSub
             <input
               type="text"
               value={search}
-              onChange={e => { setSearch(e.target.value); setShowPicker(true); }}
-              onFocus={() => setShowPicker(true)}
+              onChange={e => { setSearch(e.target.value); openPicker(); }}
+              onFocus={() => openPicker()}
               placeholder="Search emoji... (e.g. coffee, run, book)"
               autoComplete="off"
             />
             {showPicker && (
               <div className="emoji-picker">
-                {results.length === 0 ? (
+                {emojiLoading ? (
+                  <p className="emoji-picker-empty">Loading emoji...</p>
+                ) : results.length === 0 ? (
                   <p className="emoji-picker-empty">No matching emoji</p>
                 ) : (
                   <div className="emoji-picker-grid">
@@ -93,7 +116,7 @@ export default function EventForm({ initialName, initialIcon, submitLabel, onSub
                         type="button"
                         className="emoji-picker-item"
                         onClick={() => selectEmoji(entry.emoji)}
-                        title={entry.keywords.join(', ')}
+                        title={entry.name}
                       >
                         {entry.emoji}
                       </button>
