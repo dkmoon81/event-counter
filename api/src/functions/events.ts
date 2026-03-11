@@ -1,6 +1,6 @@
 import { app, type HttpRequest, type HttpResponseInit, type InvocationContext } from "@azure/functions";
 import { v4 as uuidv4 } from "uuid";
-import { ensureTable, getAllEvents, createEvent, updateEvent, deleteEvent, incrementEvent, decrementEvent } from "../store.js";
+import { ensureTable, getAllEvents, createEvent, updateEvent, deleteEvent, incrementEvent, decrementEvent, getEventHistory } from "../store.js";
 
 let tableReady: Promise<void> | null = null;
 function initTable() {
@@ -102,5 +102,20 @@ app.http("eventDecrement", {
     const event = await decrementEvent(id);
     if (!event) return { status: 404, jsonBody: { error: "Event not found" } };
     return { jsonBody: event };
+  },
+});
+
+// GET /api/events/{id}/history - get 7-day history
+app.http("eventHistory", {
+  methods: ["GET"],
+  authLevel: "anonymous",
+  route: "events/{id}/history",
+  handler: async (request: HttpRequest, _context: InvocationContext): Promise<HttpResponseInit> => {
+    await initTable();
+    const id = request.params.id;
+    if (!id) return { status: 400, jsonBody: { error: "Event ID is required" } };
+
+    const history = await getEventHistory(id, 7);
+    return { jsonBody: history };
   },
 });

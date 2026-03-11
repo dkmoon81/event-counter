@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react'
 import type { EventItem } from '../api.ts'
 import { fetchEvents, incrementEvent, decrementEvent } from '../api.ts'
+import WeekChart from '../components/WeekChart.tsx'
 
 export default function TrackEvents() {
   const [events, setEvents] = useState<EventItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [chartKey, setChartKey] = useState(0)
 
   useEffect(() => {
     loadEvents()
@@ -28,6 +31,7 @@ export default function TrackEvents() {
     try {
       const updated = await incrementEvent(id)
       setEvents(prev => prev.map(e => e.id === id ? updated : e))
+      setChartKey(k => k + 1)
     } catch {
       setError('Failed to increment')
     }
@@ -37,9 +41,14 @@ export default function TrackEvents() {
     try {
       const updated = await decrementEvent(id)
       setEvents(prev => prev.map(e => e.id === id ? updated : e))
+      setChartKey(k => k + 1)
     } catch {
       setError('Failed to decrement')
     }
+  }
+
+  function toggleChart(id: string) {
+    setExpandedId(prev => prev === id ? null : id)
   }
 
   if (loading) return <p className="center">Loading...</p>
@@ -62,6 +71,7 @@ export default function TrackEvents() {
                 )}
               </div>
               <h3>{event.name}</h3>
+              <div className="today-label">Today</div>
               <div className="counter">
                 <button
                   className="btn btn-decrement"
@@ -78,6 +88,15 @@ export default function TrackEvents() {
                   +
                 </button>
               </div>
+              <button
+                className="btn btn-chart-toggle"
+                onClick={() => toggleChart(event.id)}
+              >
+                {expandedId === event.id ? 'Hide 7-Day History' : 'Show 7-Day History'}
+              </button>
+              {expandedId === event.id && (
+                <WeekChart key={`${event.id}-${chartKey}`} eventId={event.id} />
+              )}
             </div>
           ))}
         </div>
