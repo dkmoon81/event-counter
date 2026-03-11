@@ -1,6 +1,12 @@
 import { app, type HttpRequest, type HttpResponseInit, type InvocationContext } from "@azure/functions";
 import { v4 as uuidv4 } from "uuid";
-import { getAllEvents, getEvent, createEvent, updateEvent, deleteEvent, incrementEvent, decrementEvent } from "../store.js";
+import { ensureTable, getAllEvents, createEvent, updateEvent, deleteEvent, incrementEvent, decrementEvent } from "../store.js";
+
+let tableReady: Promise<void> | null = null;
+function initTable() {
+  if (!tableReady) tableReady = ensureTable();
+  return tableReady;
+}
 
 // GET /api/events - list all events
 // POST /api/events - create a new event
@@ -9,8 +15,10 @@ app.http("events", {
   authLevel: "anonymous",
   route: "events",
   handler: async (request: HttpRequest, _context: InvocationContext): Promise<HttpResponseInit> => {
+    await initTable();
+
     if (request.method === "GET") {
-      return { jsonBody: getAllEvents() };
+      return { jsonBody: await getAllEvents() };
     }
 
     // POST - create event
@@ -25,7 +33,7 @@ app.http("events", {
       icon: typeof body.icon === "string" ? body.icon : "",
       count: 0,
     };
-    createEvent(event);
+    await createEvent(event);
     return { status: 201, jsonBody: event };
   },
 });
@@ -37,13 +45,15 @@ app.http("eventById", {
   authLevel: "anonymous",
   route: "events/{id}",
   handler: async (request: HttpRequest, _context: InvocationContext): Promise<HttpResponseInit> => {
+    await initTable();
+
     const id = request.params.id;
     if (!id) {
       return { status: 400, jsonBody: { error: "Event ID is required" } };
     }
 
     if (request.method === "DELETE") {
-      const deleted = deleteEvent(id);
+      const deleted = await deleteEvent(id);
       if (!deleted) {
         return { status: 404, jsonBody: { error: "Event not found" } };
       }
@@ -52,7 +62,7 @@ app.http("eventById", {
 
     // PUT - update event
     const body = await request.json() as { name?: string; icon?: string };
-    const updated = updateEvent(id, {
+    const updated = await updateEvent(id, {
       name: body.name?.trim(),
       icon: body.icon,
     });
@@ -69,10 +79,11 @@ app.http("eventIncrement", {
   authLevel: "anonymous",
   route: "events/{id}/increment",
   handler: async (request: HttpRequest, _context: InvocationContext): Promise<HttpResponseInit> => {
+    await initTable();
     const id = request.params.id;
     if (!id) return { status: 400, jsonBody: { error: "Event ID is required" } };
 
-    const event = incrementEvent(id);
+    const event = await incrementEvent(id);
     if (!event) return { status: 404, jsonBody: { error: "Event not found" } };
     return { jsonBody: event };
   },
@@ -84,10 +95,11 @@ app.http("eventDecrement", {
   authLevel: "anonymous",
   route: "events/{id}/decrement",
   handler: async (request: HttpRequest, _context: InvocationContext): Promise<HttpResponseInit> => {
+    await initTable();
     const id = request.params.id;
     if (!id) return { status: 400, jsonBody: { error: "Event ID is required" } };
 
-    const event = decrementEvent(id);
+    const event = await decrementEvent(id);
     if (!event) return { status: 404, jsonBody: { error: "Event not found" } };
     return { jsonBody: event };
   },
