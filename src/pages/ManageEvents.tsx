@@ -74,7 +74,8 @@ export default function ManageEvents() {
     setOverIndex(index)
   }
 
-  function handleDragLeave() {
+  function handleDragLeave(e: React.DragEvent) {
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return
     setOverIndex(null)
   }
 

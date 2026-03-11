@@ -63,8 +63,8 @@ export async function fetchEventHistory(id: string): Promise<DailyCount[]> {
 }
 
 export async function reorderEvents(orderedIds: string[]): Promise<void> {
-  const res = await fetch(`${BASE}/reorder`, {
-    method: 'PUT',
+  const res = await fetch('/api/reorder', {
+    method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ orderedIds }),
   });

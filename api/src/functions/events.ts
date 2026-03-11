@@ -121,11 +121,11 @@ app.http("eventHistory", {
   },
 });
 
-// PUT /api/events/reorder - reorder events
+// POST /api/reorder - reorder events
 app.http("eventReorder", {
-  methods: ["PUT"],
+  methods: ["POST"],
   authLevel: "anonymous",
-  route: "events/reorder",
+  route: "reorder",
   handler: async (request: HttpRequest, _context: InvocationContext): Promise<HttpResponseInit> => {
     await initTable();
     const body = await request.json() as { orderedIds?: string[] };
