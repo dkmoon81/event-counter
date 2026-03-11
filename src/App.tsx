@@ -1,8 +1,14 @@
 import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom'
+import { useEffect } from 'react'
+import { prefetchEmojis } from './emojiData.ts'
 import ManageEvents from './pages/ManageEvents.tsx'
 import TrackEvents from './pages/TrackEvents.tsx'
 
 export default function App() {
+  useEffect(() => {
+    prefetchEmojis()
+  }, [])
+
   return (
     <BrowserRouter>
       <div className="app">

@@ -16,25 +16,38 @@ interface CdnEmojiData {
 }
 
 let cache: EmojiEntry[] | null = null
+let fetchPromise: Promise<EmojiEntry[]> | null = null
 
-export async function loadEmojiData(): Promise<EmojiEntry[]> {
-  if (cache) return cache
-
-  const res = await fetch(CDN_URL)
-  if (!res.ok) throw new Error('Failed to load emoji data')
-  const data: CdnEmojiData = await res.json()
-
-  cache = Object.entries(data).map(([emoji, info]) => ({
-    emoji,
-    name: info.name,
-  }))
-  return cache
+export function prefetchEmojis(): void {
+  if (cache || fetchPromise) return
+  fetchPromise = fetch(CDN_URL)
+    .then(res => {
+      if (!res.ok) throw new Error('Failed to load emoji data')
+      return res.json() as Promise<CdnEmojiData>
+    })
+    .then(data => {
+      cache = Object.entries(data).map(([emoji, info]) => ({
+        emoji,
+        name: info.name,
+      }))
+      return cache
+    })
+    .catch(() => {
+      fetchPromise = null
+      return [] as EmojiEntry[]
+    })
 }
 
-export function searchEmoji(allEmojis: EmojiEntry[], query: string): EmojiEntry[] {
-  if (!query.trim()) return allEmojis.slice(0, 30)
+export function getEmojiCache(): EmojiEntry[] {
+  return cache ?? []
+}
+
+export function searchEmoji(query: string): EmojiEntry[] {
+  const all = getEmojiCache()
+  if (all.length === 0) return []
+  if (!query.trim()) return all.slice(0, 30)
   const words = query.toLowerCase().trim().split(/\s+/)
-  return allEmojis.filter(entry => {
+  return all.filter(entry => {
     const name = entry.name.toLowerCase()
     return words.every(w => name.includes(w))
   }).slice(0, 30)
