@@ -1,6 +1,6 @@
 import { app, type HttpRequest, type HttpResponseInit, type InvocationContext } from "@azure/functions";
 import { v4 as uuidv4 } from "uuid";
-import { ensureTable, getAllEvents, createEvent, updateEvent, deleteEvent, incrementEvent, decrementEvent, getEventHistory } from "../store.js";
+import { ensureTable, getAllEvents, createEvent, updateEvent, deleteEvent, incrementEvent, decrementEvent, getEventHistory, reorderEvents } from "../store.js";
 
 let tableReady: Promise<void> | null = null;
 function initTable() {
@@ -32,6 +32,7 @@ app.http("events", {
       name: body.name.trim(),
       icon: typeof body.icon === "string" ? body.icon : "",
       count: 0,
+      order: Date.now(),
     };
     await createEvent(event);
     return { status: 201, jsonBody: event };
@@ -117,5 +118,21 @@ app.http("eventHistory", {
 
     const history = await getEventHistory(id, 7);
     return { jsonBody: history };
+  },
+});
+
+// PUT /api/events/reorder - reorder events
+app.http("eventReorder", {
+  methods: ["PUT"],
+  authLevel: "anonymous",
+  route: "events/reorder",
+  handler: async (request: HttpRequest, _context: InvocationContext): Promise<HttpResponseInit> => {
+    await initTable();
+    const body = await request.json() as { orderedIds?: string[] };
+    if (!Array.isArray(body.orderedIds)) {
+      return { status: 400, jsonBody: { error: "orderedIds array is required" } };
+    }
+    await reorderEvents(body.orderedIds);
+    return { status: 200, jsonBody: { success: true } };
   },
 });

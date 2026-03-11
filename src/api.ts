@@ -3,6 +3,7 @@ export interface EventItem {
   name: string;
   icon: string;
   count: number;
+  order: number;
 }
 
 export interface DailyCount {
@@ -59,4 +60,13 @@ export async function fetchEventHistory(id: string): Promise<DailyCount[]> {
   const res = await fetch(`${BASE}/${encodeURIComponent(id)}/history`);
   if (!res.ok) throw new Error('Failed to fetch history');
   return res.json();
+}
+
+export async function reorderEvents(orderedIds: string[]): Promise<void> {
+  const res = await fetch(`${BASE}/reorder`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ orderedIds }),
+  });
+  if (!res.ok) throw new Error('Failed to reorder events');
 }

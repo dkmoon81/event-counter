@@ -5,6 +5,7 @@ export interface EventItem {
   name: string;
   icon: string;
   count: number;
+  order: number;
 }
 
 export interface DailyCount {
@@ -17,6 +18,7 @@ interface EventEntity {
   rowKey: string;
   name: string;
   icon: string;
+  order: number;
 }
 
 interface DailyCountEntity {
@@ -55,6 +57,7 @@ function toEventItem(entity: EventEntity, todayCount: number): EventItem {
     name: entity.name,
     icon: entity.icon,
     count: todayCount,
+    order: entity.order ?? 0,
   };
 }
 
@@ -94,6 +97,7 @@ export async function getAllEvents(): Promise<EventItem[]> {
     const todayCount = await getDailyCount(entity.rowKey, today);
     items.push(toEventItem(entity, todayCount));
   }
+  items.sort((a, b) => a.order - b.order);
   return items;
 }
 
@@ -116,6 +120,7 @@ export async function createEvent(event: EventItem): Promise<void> {
     rowKey: event.id,
     name: event.name,
     icon: event.icon,
+    order: event.order,
   });
 }
 
@@ -134,6 +139,7 @@ export async function updateEvent(id: string, updates: Partial<Pick<EventItem, "
     rowKey: id,
     name: updates.name !== undefined ? updates.name : existing.name,
     icon: updates.icon !== undefined ? updates.icon : existing.icon,
+    order: existing.order ?? 0,
   };
   await client.updateEntity(updated, "Replace");
   const todayCount = await getDailyCount(id, today);
@@ -208,4 +214,22 @@ export async function getEventHistory(id: string, days: number = 7): Promise<Dai
     history.push({ date, count });
   }
   return history;
+}
+
+export async function reorderEvents(orderedIds: string[]): Promise<void> {
+  const client = getEventsClient();
+  for (let i = 0; i < orderedIds.length; i++) {
+    try {
+      const entity = await client.getEntity<EventEntity>(PARTITION_KEY, orderedIds[i]);
+      await client.updateEntity<EventEntity>({
+        partitionKey: PARTITION_KEY,
+        rowKey: orderedIds[i],
+        name: entity.name,
+        icon: entity.icon,
+        order: i,
+      }, "Replace");
+    } catch {
+      // Skip missing events
+    }
+  }
 }

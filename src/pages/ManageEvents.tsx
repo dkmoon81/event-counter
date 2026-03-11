@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { EventItem } from '../api.ts'
-import { fetchEvents, createEvent, updateEvent, deleteEvent } from '../api.ts'
+import { fetchEvents, createEvent, updateEvent, deleteEvent, reorderEvents } from '../api.ts'
 import EventForm from '../components/EventForm.tsx'
 
 export default function ManageEvents() {
@@ -8,6 +8,8 @@ export default function ManageEvents() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [editingEvent, setEditingEvent] = useState<EventItem | null>(null)
+  const dragItem = useRef<number | null>(null)
+  const dragOverItem = useRef<number | null>(null)
 
   useEffect(() => {
     loadEvents()
@@ -59,6 +61,36 @@ export default function ManageEvents() {
     }
   }
 
+  function handleDragStart(index: number) {
+    dragItem.current = index
+  }
+
+  function handleDragOver(e: React.DragEvent, index: number) {
+    e.preventDefault()
+    dragOverItem.current = index
+  }
+
+  async function handleDrop() {
+    if (dragItem.current === null || dragOverItem.current === null) return
+    if (dragItem.current === dragOverItem.current) return
+
+    const reordered = [...events]
+    const [removed] = reordered.splice(dragItem.current, 1)
+    reordered.splice(dragOverItem.current, 0, removed)
+
+    dragItem.current = null
+    dragOverItem.current = null
+
+    setEvents(reordered)
+
+    try {
+      await reorderEvents(reordered.map(e => e.id))
+    } catch {
+      setError('Failed to save order')
+      await loadEvents()
+    }
+  }
+
   if (loading) return <p className="center">Loading...</p>
 
   return (
@@ -79,8 +111,17 @@ export default function ManageEvents() {
         <p className="center">No events yet. Create one above!</p>
       ) : (
         <div className="event-list">
-          {events.map(event => (
-            <div key={event.id} className="event-row">
+          {events.map((event, index) => (
+            <div
+              key={event.id}
+              className="event-row"
+              draggable
+              onDragStart={() => handleDragStart(index)}
+              onDragOver={(e) => handleDragOver(e, index)}
+              onDrop={handleDrop}
+              onDragEnd={() => { dragItem.current = null; dragOverItem.current = null; }}
+            >
+              <span className="drag-handle" title="Drag to reorder">⠿</span>
               <span className="event-row-icon">
                 {event.icon || '📊'}
               </span>

@@ -248,6 +248,28 @@ nav a.active {
   align-items: center;
   gap: 16px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  cursor: grab;
+  transition: opacity 0.2s, box-shadow 0.2s;
+}
+
+.event-row:active {
+  cursor: grabbing;
+}
+
+.event-row[draggable="true"]:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.drag-handle {
+  font-size: 1.2rem;
+  color: var(--text-muted);
+  cursor: grab;
+  user-select: none;
+  letter-spacing: 2px;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
 }
 
 .event-row-icon {
